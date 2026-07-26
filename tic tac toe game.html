@@ -5,13 +5,18 @@
 <title>Tic Tac Toe | Smart AI</title>
 <style>
 *{box-sizing:border-box}
+
+/* shared centering utility */
+body,.menu,.cell{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
 body{
     margin:0;
     height:100vh;
     background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-    display:flex;
-    justify-content:center;
-    align-items:center;
     font-family:Segoe UI,sans-serif;
 }
 
@@ -20,9 +25,6 @@ body{
     position:absolute;
     inset:0;
     background:rgba(0,0,0,.9);
-    display:flex;
-    justify-content:center;
-    align-items:center;
 }
 .menu-box{
     background:#1e293b;
@@ -73,9 +75,6 @@ h2{color:#fff}
     height:100px;
     background:rgba(255,255,255,.15);
     border-radius:15px;
-    display:flex;
-    justify-content:center;
-    align-items:center;
     font-size:48px;
     cursor:pointer;
     transition:.2s;
@@ -109,8 +108,8 @@ h2{color:#fff}
 <div class="menu" id="menu">
     <div class="menu-box">
         <h1>Tic Tac Toe 😈😇</h1>
-        <button onclick="startPvP()">▶ Player vs Player</button>
-        <button onclick="startAI()">🤖 Player vs AI</button>
+        <button onclick="startGame(false)">▶ Player vs Player</button>
+        <button onclick="startGame(true)">🤖 Player vs AI</button>
     </div>
 </div>
 
@@ -138,6 +137,7 @@ let aiMode = false;
 let current = PLAYER;
 let active = true;
 let state = Array(9).fill("");
+let cells = [];
 
 const wins = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -145,16 +145,30 @@ const wins = [
   [0,4,8],[2,4,6]
 ];
 
-function startPvP(){
-    aiMode=false;
-    startGame();
-}
-function startAI(){
-    aiMode=true;
-    startGame();
+function opponentOf(player){
+    return player===PLAYER ? AI : PLAYER;
 }
 
-function startGame(){
+function emptyCells(boardState){
+    const free=[];
+    for(let i=0;i<9;i++){
+        if(boardState[i]==="") free.push(i);
+    }
+    return free;
+}
+
+function winningLine(boardState,player){
+    return wins.find(([a,b,c])=>
+        boardState[a]===player && boardState[b]===player && boardState[c]===player
+    );
+}
+
+function turnStatus(player){
+    return aiMode && player===AI ? "AI thinking 🤖..." : `Player ${player} turn`;
+}
+
+function startGame(useAI){
+    aiMode=useAI;
     menu.style.display="none";
     game.style.display="block";
     init();
@@ -166,17 +180,24 @@ function restartGame(){
 
 function init(){
     board.innerHTML="";
+    cells=[];
     state.fill("");
     active=true;
     current=PLAYER;
-    statusText.textContent=`Player ${PLAYER} turn`;
+    statusText.textContent=turnStatus(current);
 
     for(let i=0;i<9;i++){
         const cell=document.createElement("div");
         cell.className="cell";
         cell.onclick=()=>makeMove(cell,i);
+        cells.push(cell);
         board.appendChild(cell);
     }
+}
+
+function endGame(message){
+    statusText.textContent=message;
+    active=false;
 }
 
 function makeMove(cell,i){
@@ -185,97 +206,63 @@ function makeMove(cell,i){
     state[i]=current;
     cell.textContent=current;
 
-    if(checkWin(current)){
-        statusText.textContent=`${current} wins 🎉`;
-        active=false;
+    const line=winningLine(state,current);
+    if(line){
+        line.forEach(index=>cells[index].classList.add("win"));
+        endGame(`${current} wins 🎉`);
         return;
     }
 
-    if(!state.includes("")){
-        statusText.textContent="Draw 😐";
-        active=false;
+    if(!emptyCells(state).length){
+        endGame("Draw 😐");
         return;
     }
 
-    if(aiMode){
-        current = current===PLAYER ? AI : PLAYER;
-        statusText.textContent = current===AI ? "AI thinking 🤖..." : `Player ${PLAYER} turn`;
+    current=opponentOf(current);
+    statusText.textContent=turnStatus(current);
 
-        if(current===AI){
-            setTimeout(aiMove,500);
-        }
-    }else{
-        current = current===PLAYER ? AI : PLAYER;
-        statusText.textContent=`Player ${current} turn`;
+    if(aiMode && current===AI){
+        setTimeout(aiMove,500);
     }
 }
 
 function aiMove(){
     if(!active) return;
 
-    let bestScore = -Infinity;
+    let bestScore=-Infinity;
     let move;
 
-    for(let i=0;i<9;i++){
-        if(state[i]==""){
-            state[i]=AI;
-            let score = minimax(state,0,false);
-            state[i]="";
-            if(score>bestScore){
-                bestScore=score;
-                move=i;
-            }
+    for(const i of emptyCells(state)){
+        state[i]=AI;
+        const score=minimax(state,0,false);
+        state[i]="";
+        if(score>bestScore){
+            bestScore=score;
+            move=i;
         }
     }
 
-    document.querySelectorAll(".cell")[move].click();
+    cells[move].click();
 }
 
 function minimax(boardState,depth,isMax){
-    if(checkWinner(AI)) return 10-depth;
-    if(checkWinner(PLAYER)) return depth-10;
-    if(!boardState.includes("")) return 0;
+    if(winningLine(boardState,AI)) return 10-depth;
+    if(winningLine(boardState,PLAYER)) return depth-10;
 
-    if(isMax){
-        let best=-Infinity;
-        for(let i=0;i<9;i++){
-            if(boardState[i]==""){
-                boardState[i]=AI;
-                best=Math.max(best,minimax(boardState,depth+1,false));
-                boardState[i]="";
-            }
-        }
-        return best;
-    }else{
-        let best=Infinity;
-        for(let i=0;i<9;i++){
-            if(boardState[i]==""){
-                boardState[i]=PLAYER;
-                best=Math.min(best,minimax(boardState,depth+1,true));
-                boardState[i]="";
-            }
-        }
-        return best;
+    const free=emptyCells(boardState);
+    if(!free.length) return 0;
+
+    const player=isMax ? AI : PLAYER;
+    let best=isMax ? -Infinity : Infinity;
+
+    for(const i of free){
+        boardState[i]=player;
+        const score=minimax(boardState,depth+1,!isMax);
+        boardState[i]="";
+        best=isMax ? Math.max(best,score) : Math.min(best,score);
     }
-}
 
-function checkWin(player){
-    return wins.some(w=>{
-        const[a,b,c]=w;
-        if(state[a]==player && state[b]==player && state[c]==player){
-            document.querySelectorAll(".cell")[a].classList.add("win");
-            document.querySelectorAll(".cell")[b].classList.add("win");
-            document.querySelectorAll(".cell")[c].classList.add("win");
-            return true;
-        }
-    });
-}
-
-function checkWinner(player){
-    return wins.some(w=>{
-        const[a,b,c]=w;
-        return state[a]==player && state[b]==player && state[c]==player;
-    });
+    return best;
 }
 </script>
 
