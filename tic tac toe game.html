@@ -126,10 +126,18 @@ h2{color:#fff}
 </div>
 
 <script>
-const menu = document.getElementById("menu");
-const game = document.getElementById("game");
-const board = document.getElementById("board");
-const statusText = document.getElementById("status");
+function getRequiredElement(id){
+    const el = document.getElementById(id);
+    if(!el){
+        throw new Error(`Required element #${id} was not found in the document`);
+    }
+    return el;
+}
+
+const menu = getRequiredElement("menu");
+const game = getRequiredElement("game");
+const board = getRequiredElement("board");
+const statusText = getRequiredElement("status");
 
 const PLAYER = "😈";
 const AI = "😇";
@@ -145,6 +153,13 @@ const wins = [
   [0,4,8],[2,4,6]
 ];
 
+function reportError(context, err){
+    console.error(`${context}:`, err);
+    if(statusText){
+        statusText.textContent = "Something went wrong. Please restart the game.";
+    }
+}
+
 function startPvP(){
     aiMode=false;
     startGame();
@@ -155,13 +170,21 @@ function startAI(){
 }
 
 function startGame(){
-    menu.style.display="none";
-    game.style.display="block";
-    init();
+    try{
+        menu.style.display="none";
+        game.style.display="block";
+        init();
+    }catch(err){
+        reportError("Failed to start game", err);
+    }
 }
 
 function restartGame(){
-    init();
+    try{
+        init();
+    }catch(err){
+        reportError("Failed to restart game", err);
+    }
 }
 
 function init(){
@@ -174,13 +197,22 @@ function init(){
     for(let i=0;i<9;i++){
         const cell=document.createElement("div");
         cell.className="cell";
-        cell.onclick=()=>makeMove(cell,i);
+        cell.onclick=()=>{
+            try{
+                makeMove(cell,i);
+            }catch(err){
+                reportError("Failed to make move", err);
+            }
+        };
         board.appendChild(cell);
     }
 }
 
 function makeMove(cell,i){
     if(!active || state[i]) return;
+    if(!cell){
+        throw new Error(`Cannot play move at index ${i}: cell element is missing`);
+    }
 
     state[i]=current;
     cell.textContent=current;
@@ -211,24 +243,37 @@ function makeMove(cell,i){
 }
 
 function aiMove(){
-    if(!active) return;
+    try{
+        if(!active) return;
 
-    let bestScore = -Infinity;
-    let move;
+        let bestScore = -Infinity;
+        let move;
 
-    for(let i=0;i<9;i++){
-        if(state[i]==""){
-            state[i]=AI;
-            let score = minimax(state,0,false);
-            state[i]="";
-            if(score>bestScore){
-                bestScore=score;
-                move=i;
+        for(let i=0;i<9;i++){
+            if(state[i]==""){
+                state[i]=AI;
+                let score = minimax(state,0,false);
+                state[i]="";
+                if(score>bestScore){
+                    bestScore=score;
+                    move=i;
+                }
             }
         }
-    }
 
-    document.querySelectorAll(".cell")[move].click();
+        if(move===undefined){
+            throw new Error("AI could not find a valid move on the current board");
+        }
+
+        const cells = document.querySelectorAll(".cell");
+        const target = cells[move];
+        if(!target){
+            throw new Error(`AI target cell at index ${move} does not exist`);
+        }
+        target.click();
+    }catch(err){
+        reportError("AI move failed", err);
+    }
 }
 
 function minimax(boardState,depth,isMax){
@@ -260,14 +305,19 @@ function minimax(boardState,depth,isMax){
 }
 
 function checkWin(player){
+    const cells = document.querySelectorAll(".cell");
     return wins.some(w=>{
         const[a,b,c]=w;
         if(state[a]==player && state[b]==player && state[c]==player){
-            document.querySelectorAll(".cell")[a].classList.add("win");
-            document.querySelectorAll(".cell")[b].classList.add("win");
-            document.querySelectorAll(".cell")[c].classList.add("win");
+            [a,b,c].forEach(idx=>{
+                const cell = cells[idx];
+                if(cell){
+                    cell.classList.add("win");
+                }
+            });
             return true;
         }
+        return false;
     });
 }
 
@@ -277,6 +327,10 @@ function checkWinner(player){
         return state[a]==player && state[b]==player && state[c]==player;
     });
 }
+
+window.addEventListener("error", e=>{
+    reportError("Unhandled error", e.error || e.message);
+});
 </script>
 
 </body>
