@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta name="referrer" content="no-referrer">
 <title>Tic Tac Toe | Smart AI</title>
 <style>
 *{box-sizing:border-box}
@@ -94,12 +96,20 @@ h2{color:#fff}
     margin-bottom:10px;
 }
 
-.controls img{
+.controls button{
     width:55px;
+    height:55px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:#38bdf8;
+    color:#04293a;
+    font-size:26px;
+    line-height:1;
     cursor:pointer;
     transition:.2s;
 }
-.controls img:hover{transform:scale(1.15)}
+.controls button:hover{transform:scale(1.15)}
 </style>
 </head>
 
@@ -121,7 +131,7 @@ h2{color:#fff}
     <div class="board" id="board"></div>
 
     <div class="controls">
-        <img src="https://i.ibb.co/C3H6xpMw/restart.png" onclick="restartGame()" title="Restart">
+        <button type="button" onclick="restartGame()" title="Restart" aria-label="Restart">↻</button>
     </div>
 </div>
 
