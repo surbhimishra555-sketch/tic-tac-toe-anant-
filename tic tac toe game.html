@@ -615,6 +615,7 @@ function showBirthday(){
     $("bdayPic").classList.toggle("hidden", !pic);
     $("bdayCake").classList.toggle("hidden", !!pic);
     if(pic) $("bdayPic").src = pic;
+    game.inert = true;
     $("bday").classList.remove("hidden");
     $("bdayBtn").focus();
     playBirthdaySong();
@@ -622,6 +623,7 @@ function showBirthday(){
 }
 function hideBirthday(){
     $("bday").classList.add("hidden");
+    game.inert = false;
     stopConfetti();
     if(audioCtx){ audioCtx.close(); audioCtx = null; }
     if(cells[4] && !isAiTurn()) cells[4].focus({preventScroll:true});
